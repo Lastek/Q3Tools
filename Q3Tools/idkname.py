@@ -1,4 +1,3 @@
-
 __author__ = 'Cyberstorm'
 # Bit of code to convert bytes to ascii chars
 # dont need this if we write with mode='bw'
@@ -8,6 +7,8 @@ __author__ = 'Cyberstorm'
 #mkay...
 import struct
 import array
+
+# http://www.mralligator.com/q3/
 #
 # Type	Description
 # ubyte	unsigned byte
@@ -36,6 +37,9 @@ import array
 # 15	    Lightvols   	Local illumination data.
 # 16	    Visdata	        Cluster-cluster visibility data.
 
+# Note: Q3 treats textures and shaders the same xept shaders
+#       go thru some extra stages to be rendered.
+
 class BSP():
     def __init__(self):
         self.error = ''
@@ -60,39 +64,49 @@ class BSP():
             self.direntry.append(struct.unpack("ii", self.file.read(8)))
             print ("lump : {} ofst {} | len {}".format(i, self.direntry[i][0], self.direntry[i][1]))
 
-        #self.Textures(self.rdlump(1))
+        self.Textures(self.rdlump(1))
         self.Planes(self.rdlump(2))
+        self.Nodes(self.rdlump(3))
+        self.Leafs(self.rdlump(4))
+        # After I got all the data it would be good to prune the texture names
+
     def rdlump(self, de):
         self.file.seek(self.direntry[de][0])    #offset
         return self.file.read(self.direntry[de][1])    #length
-
+    #print (" : {}".format(self.))
     def Entities(self, data):
         pass
 
     def Textures(self, data):   #Needs to detect shader number shaders = (len/72)
-        textures = len(data)/72
-        # get tex name, unpack surface and content flags
+        textures = int(len(data)/72)
         self.texture = list()
-        for i in range(textures):
-            self.texture.append(data[i*64 : i*64 + 64])
-            #2byte int
-            self.texture.append(struct.unpack("i", data[64:68]))
-            self.texture.append(struct.unpack("i", data[68:72]))
-        print (self.texture)
+        # get tex name, unpack surface and content flags
+        for i in range(textures):   # ideally it should be 1 tuple for each tex but idk how so fuck it
+            self.texture.append(data[i*72 : i*72 + 64])
+            self.texture.append(struct.unpack("ii", data[i*72+64 : i*72+72]))  #2byte int
+        print ("textures : {}".format(self.texture))
 
     def Planes(self, data):
         planes = int(len(data) / 16)
         self.plane = list()
         # 16 = planesize = 4bFloat*3verts+4bfloat*1dist
         for i in range(planes):
-            self.plane.append(struct.unpack("ffff", data[i * 16:i * 16 + 16]))
-        print (self.plane)
+            self.plane.append(struct.unpack("ffff", data[i*16 : i*16+16]))
+        print ("planes : {}".format(self.plane))
 
     def Nodes(self, data):
-        pass
+        nodes = int(len(data) / 36)
+        self.node = list()
+        for i in range(nodes):
+            self.node.append(struct.unpack("iiiiiiiii", data[i*36 : i*36+36]))
+        print ("nodes : {}".format(self.node))
 
     def Leafs(self, data):
-        pass
+        leafs = int(len(data) / 48)
+        self.leaf = list()
+        for i in range(leafs):
+            self.leaf.append(struct.unpack("iiiiiiiiiiii", data[i*48 : i*48+48]))
+        print ("leafs : {}".format(self.leaf))
 
     def Leaffaces(self, data):
         pass
